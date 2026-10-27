@@ -42,8 +42,8 @@ pub fn build(b: *std.Build) void {
     // Boot the built ELF with QEMU's AArch64 virtual board.
     // `-nographic` routes the emulated serial console to the terminal.
     const qemu = b.addSystemCommand(&.{
-        "qemu-system-aarch64", "-machine", "virt",  "-cpu",     "cortex-a72",
-        "-nographic",          "-m",       "128M",  "-kernel",
+        "qemu-system-aarch64", "-machine", "virt", "-cpu",    "cortex-a72",
+        "-nographic",          "-m",       "128M", "-kernel",
     });
     qemu.addArtifactArg(kernel);
     const run = b.step("run", "Boot the image in QEMU (virt, aarch64)");

@@ -1,6 +1,6 @@
 //! UART driver
 //! Lets the kernel to send text to the terminal.
-//! 
+//!
 //! HARDWARE NOTE
 //!
 //! Current target:
@@ -18,7 +18,7 @@ const base: usize = 0x0900_0000;
 // Data Register (DR)
 // Writing a character here tells the UART to transmit it.
 // base + 0x00 meants the register is at its base address.
-// 
+//
 // Volatile is used because normally loads and stores are assumed to not have side effects
 // if a given load or store should have side effects, volatile is used.
 const dr: *volatile u32 = @ptrFromInt(base + 0x00);
