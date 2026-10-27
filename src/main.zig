@@ -1,64 +1,57 @@
+//! Kernel entry. The set of modules is chosen at build time (using -Dmodules=).
+
 const std = @import("std");
-const Io = std.Io;
+const config = @import("config");
+const registry = @import("kernel/registry.zig");
+const all = @import("modules/all.zig");
 
-const Project_Korbora = @import("Project_Korbora");
+comptime {
+    _ = @import("arch/aarch64/boot.zig");
+}
 
-pub fn main(init: std.process.Init) !void {
-    std.debug.print("Project: {s}\n", .{"Korbora"});
+const enabled = parse(config.modules);
+const order = registry.resolve(&all.list, &enabled);
 
-    const arena: std.mem.Allocator = init.arena.allocator();
+fn parse(comptime csv: []const u8) [count(csv)][]const u8 {
+    comptime {
+        var out: [count(csv)][]const u8 = undefined;
+        var it = std.mem.splitScalar(u8, csv, ',');
+        var i: usize = 0;
 
-    const args = try init.minimal.args.toSlice(arena);
-    for (args) |arg| {
-        std.log.info("arg: {s}", .{arg});
+        while (it.next()) |n| : (i += 1) out[i] = n;
+
+        return out;
+    }
+}
+
+fn count(comptime csv: []const u8) usize {
+    return std.mem.count(u8, csv, ",") + 1;
+}
+
+export fn kmain() noreturn {
+    registry.initAll(&order) catch @panic("module init failed");
+
+    inline for (all.list) |M| {
+        if (comptime std.mem.eql(u8, M.name, "mem")) {
+            if (comptime isEnabled("mem")) M.lock();
+        }
     }
 
-    const io = init.io;
-
-    var stdout_buffer: [1024]u8 = undefined;
-    var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
-    const stdout_writer = &stdout_file_writer.interface;
-
-    try Project_Korbora.printAnotherMessage(stdout_writer);
-
-    try stdout_writer.flush();
+    while (true) asm volatile ("wfe");
 }
 
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+fn isEnabled(comptime n: []const u8) bool {
+    inline for (enabled) |e| if (std.mem.eql(u8, e, n)) return true;
+
+    return false;
 }
 
-test "fuzz example" {
-    try std.testing.fuzz({}, testOne, .{});
-}
+pub fn panic(msg: []const u8, _: ?*std.builtin.StackTrace, _: ?usize) noreturn {
+    const uart = @import("arch/aarch64/uart.zig");
 
-fn testOne(context: void, smith: *std.testing.Smith) !void {
-    _ = context;
-    // Try command `zig build test --fuzz -Doptimize=ReleaseFast` to see if it manages to fail this test case!
-
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(u8) = .empty;
-    defer list.deinit(gpa);
-    while (!smith.eos()) switch (smith.value(enum { add_data, dup_data })) {
-        .add_data => {
-            const slice = try list.addManyAsSlice(gpa, smith.value(u4));
-            smith.bytes(slice);
-        },
-        .dup_data => {
-            if (list.items.len == 0) continue;
-            if (list.items.len > std.math.maxInt(u32)) return error.SkipZigTest;
-            const len = smith.valueRangeAtMost(u32, 1, @min(32, list.items.len));
-            const off = smith.valueRangeAtMost(u32, 0, @intCast(list.items.len - len));
-            try list.appendSlice(gpa, list.items[off..][0..len]);
-            try std.testing.expectEqualSlices(
-                u8,
-                list.items[off..][0..len],
-                list.items[list.items.len - len ..],
-            );
-        },
-    };
+    uart.write("\nPANIC: ");
+    uart.write(msg);
+    uart.write("\n");
+    
+    while (true) asm volatile ("wfe");
 }

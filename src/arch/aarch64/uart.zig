@@ -36,7 +36,7 @@ const fr: *volatile u32 = @ptrFromInt(base + 0x18);
 // If this bit is 0, there is room for another character.
 const txff: u32 = 1 << 5;
 
-// Send one character through the UART.
+/// Send one character through the UART.
 pub fn putc(c: u8) void {
     // Busy-waiting
     // Checking the Flag Register while the transmit queue is full
@@ -45,7 +45,7 @@ pub fn putc(c: u8) void {
     dr.* = c;
 }
 
-// Send whole string through the UART.
+/// Send whole string through the UART.
 pub fn write(s: []const u8) void {
     for (s) |c| {
         putc(c);
