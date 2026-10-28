@@ -1,0 +1,6 @@
+Hello from Korbora
+mem: * KiB free
+measure: image * bytes sha256=*
+partition: test_control crit=high mem=1024KiB slice=800us
+partition: test_telemetry crit=low mem=4096KiB slice=200us
+detsim: seed=0x4b6f72626f7261 first=aa352406

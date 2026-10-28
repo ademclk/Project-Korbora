@@ -1,0 +1,8 @@
+Hello from Korbora
+faultprobe: triggering a deliberate misaligned data access
+
+FAULT: synchronous (current EL, SPx) vector=4
+  ESR=0x*
+  ELR=0x*
+  FAR=0x*
+HALTED

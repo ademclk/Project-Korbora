@@ -50,6 +50,9 @@ src/kernel/registry.zig     Comptime module resolver (host-testable)
 src/arch/aarch64/           Boot code, exception vectors, linker script, PL011 UART
 src/modules/                Optional modules
 src/root.zig                Root for host-side unit tests
+tools/qemu_boot_test.sh     Headless QEMU boot harness used by `zig build qemu-test`
+tools/transcript_check.zig  Serial-log/transcript comparison tool
+tests/qemu/                 Expected serial transcripts, one per tested module set
 ```
 
 ## 5. Current modules
@@ -73,7 +76,7 @@ Each milestone ends with a check that can be run and passed. Milestones are in o
 
 | # | Milestone | Scope | Exit check |
 | --- | --- | --- | --- |
-| **M0** | **Hello on QEMU** | Boot at EL1, set the stack, clear BSS, write to the UART. Only the `console` module. | `zig build run -Dmodules=console` prints `Hello from Korbora` |
+| M0 | Hello on QEMU | Boot at EL1, set the stack, clear BSS, write to the UART. Only the `console` module. | `zig build run -Dmodules=console` prints `Hello from Korbora` |
 | M1 | Module system | Comptime registry, `-Dmodules=`, ordered init, `mem`, `measure`, `detsim`. | `zig build test` passes. Missing-dependency builds fail to compile. Default image prints all module lines |
 | M2 | Fault visibility | Exception vector table. Handler prints ESR, ELR and FAR, then halts. Panic prints a message. | A deliberate bad access in a test image prints a fault report and halts instead of spinning |
 | M3 | Automated boot test | A script that boots QEMU headless, captures serial output and compares it to an expected transcript. Run it for several module sets. | `zig build qemu-test` passes and fails on a changed transcript |
@@ -128,6 +131,14 @@ Each milestone ends with a check that can be run and passed. Milestones are in o
 zig build                          # builds zig-out/bin/korbora.elf
 zig build run                      # boots in qemu-system-aarch64 (Ctrl-A X to quit)
 zig build test                     # host-side unit tests
+zig build qemu-test                # boots several images headlessly, checks serial transcripts
 zig build -Dmodules=console,mem    # smaller image
 zig build --release=small          # release image
 ```
+
+`zig build qemu-test` builds one image per module set in `build.zig`, boots it
+with `-display none` and a file-backed serial console, then compares the log
+with the matching transcript under `tests/qemu/`. Transcript lines are literal
+except for `*` and `?` wildcards, which are used for values that legitimately
+change between builds (image digest, free memory, fault addresses). The command
+fails if a transcript no longer matches the booted image.
