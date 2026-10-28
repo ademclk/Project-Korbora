@@ -47,7 +47,7 @@ build.zig / build.zig.zon   Build graph, module selection, QEMU run step
 docs/design.md              This document
 src/main.zig                Kernel entry (kmain), panic handler, image composition
 src/kernel/registry.zig     Comptime module resolver (host-testable)
-src/arch/aarch64/           Boot code, linker script, PL011 UART
+src/arch/aarch64/           Boot code, exception vectors, linker script, PL011 UART
 src/modules/                Optional modules
 src/root.zig                Root for host-side unit tests
 ```
@@ -61,6 +61,9 @@ src/root.zig                Root for host-side unit tests
 | `measure` | working | SHA-256 of the loaded image |
 | `partition` | **declaration only** | Static partition table with compile-time checks on time slices. No isolation is enforced yet |
 | `detsim` | working | Seeded PRNG and a virtual clock |
+| `faultprobe` | test only | Triggers a deliberate misaligned access to exercise the exception vector table |
+
+The exception vector table lives in `src/arch/aarch64/exceptions.zig`. It is installed before `kmain` and reports the vector, `ESR_EL1`, `ELR_EL1` and `FAR_EL1` on the UART before halting. Build the M2 test image with `zig build run -Dmodules=console,faultprobe`; it must print a fault report instead of spinning.
 
 ## 6. Roadmap
 

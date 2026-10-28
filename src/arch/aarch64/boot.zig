@@ -2,7 +2,12 @@
 //! - Parks secondary cores
 //! - Sets up the stack
 //! - Clears BSS
+//! - Installs exception vectors
 //! - Jumps to the kernel.
+
+comptime {
+    _ = @import("exceptions.zig");
+}
 
 export fn _start() linksection(".text.boot") callconv(.naked) noreturn {
     asm volatile (
@@ -34,8 +39,9 @@ export fn _start() linksection(".text.boot") callconv(.naked) noreturn {
         \\ str  xzr, [x0], #8
         \\ b    1b
 
-        // Start the kernel main
+        // Install the exception vectors, then start the kernel main
         \\ 3:
+        \\ bl   exceptionsInit
         \\ bl   kmain
 
         // Wait for event

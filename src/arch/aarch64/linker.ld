@@ -9,6 +9,9 @@ SECTIONS {
     .text : ALIGN(4K) {
         __image_start = .;
         KEEP(*(.text.boot))
+        /* VBAR_EL1 requires the vector table to be 2 KiB aligned. */
+        . = ALIGN(2048);
+        KEEP(*(.text.vectors))
         *(.text .text.*)
     } > RAM
 
